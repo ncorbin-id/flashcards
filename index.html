@@ -27,6 +27,7 @@
                   var(--bg);
       color: var(--text);
       overflow: hidden;
+      min-height: 100dvh; /* modern mobile viewport */
     }
 
     .app {
@@ -44,8 +45,9 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 28px;
+        gap: 18px;
         width: 100%;
+        flex-wrap: wrap;
     }
 
     .card-wrap {
@@ -165,6 +167,57 @@
       background: rgba(255,255,255,0.06);
       color: rgba(255,255,255,0.82);
     }
+
+    @media (max-width: 640px) {
+      .app {
+        padding: 16px;
+        gap: 14px;
+        grid-template-rows: 1fr auto; /* stage + footer */
+      }
+
+      .stage {
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      .card-wrap {
+        width: min(92vw, 520px);
+        height: min(52dvh, 420px); /* better on mobile than plain vh */
+      }
+
+      .face {
+        padding: 20px;
+      }
+
+      .prompt {
+        font-size: clamp(22px, 6vw, 34px);
+        line-height: 1.18;
+      }
+
+      .controls {
+        width: min(92vw, 520px);
+        justify-content: stretch;
+      }
+
+      button {
+        width: 100%;
+        padding: 14px 16px; /* bigger tap target */
+        font-size: 16px;
+      }
+
+      .footer {
+        width: min(92vw, 520px);
+        justify-content: space-between;
+        gap: 10px;
+        font-size: 12px;
+      }
+
+      /* On phones, keyboard hints aren’t very relevant */
+      kbd {
+        display: none;
+      }
+    }
+
   </style>
 </head>
 
@@ -207,6 +260,12 @@
     let order = [];
     let index = 0;
     let isFlipped = false;
+
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchMoved = false;
+
+    const SWIPE_THRESHOLD = 40; // px
 
     function shuffle(array) {
       for (let i = array.length - 1; i > 0; i--) {
@@ -311,6 +370,41 @@
         nextCard();
       }
     });
+
+    card.addEventListener("touchstart", (e) => {
+      if (e.touches.length !== 1) return;
+
+      const t = e.touches[0];
+      touchStartX = t.clientX;
+      touchStartY = t.clientY;
+      touchMoved = false;
+    }, { passive: true });
+
+    card.addEventListener("touchmove", (e) => {
+      if (e.touches.length !== 1) return;
+
+      const t = e.touches[0];
+      const dx = t.clientX - touchStartX;
+      const dy = t.clientY - touchStartY;
+
+      if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
+        touchMoved = true;
+      }
+    }, { passive: true });
+
+    card.addEventListener("touchend", (e) => {
+      if (!touchMoved) return;
+
+      const t = e.changedTouches[0];
+      const dx = t.clientX - touchStartX;
+      const dy = t.clientY - touchStartY;
+
+      // Horizontal swipe dominates
+      if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > SWIPE_THRESHOLD) {
+        nextCard();
+      }
+    });
+
 
     init();
   </script>
